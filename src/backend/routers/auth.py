@@ -2,8 +2,8 @@
 Authentication endpoints for the High School Management System API
 """
 
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any
+from fastapi import APIRouter, HTTPException, Header
+from typing import Dict, Any, Optional
 
 from ..database import teachers_collection, verify_password
 
@@ -11,6 +11,37 @@ router = APIRouter(
     prefix="/auth",
     tags=["auth"]
 )
+
+
+async def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Dependency function to get the current authenticated user.
+    For simplicity, we're using a basic token scheme where the token is the username.
+    In production, use proper JWT tokens.
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Not authenticated"
+        )
+    
+    # For this simple implementation, the "token" is just the username
+    # In production, decode and validate a JWT token here
+    username = authorization.replace("Bearer ", "")
+    
+    teacher = teachers_collection.find_one({"_id": username})
+    
+    if not teacher:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication credentials"
+        )
+    
+    return {
+        "username": teacher["username"],
+        "display_name": teacher["display_name"],
+        "role": teacher["role"]
+    }
 
 
 @router.post("/login")
